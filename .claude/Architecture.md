@@ -25,6 +25,7 @@
 | Стили | Tailwind v4 (`@tailwindcss/vite`) + CSS-переменные |
 | UI-компоненты | **shadcn-vue** (reka-ui), кладутся в `src/shared/ui` |
 | Иконки | lucide-vue-next |
+| Локализация | **vue-i18n** v11 — все UI-строки через i18n (en/ru) |
 | Desktop | Tauri (на старте; Linux в приоритете) |
 | Mobile | Capacitor |
 | Бэкенд (позже) | Supabase (Auth + Postgres + RLS + Edge Functions) |
@@ -47,15 +48,20 @@ src/
 │  ├─ index.ts           # bootstrap(): createApp + pinia + router + mount
 │  └─ router/index.ts    # маршруты (lazy import страниц)
 ├─ pages/                # страницы-роуты
-│  └─ timer/TimerPage.vue
-├─ widgets/              # композиции из features/entities (пока пусто)
-├─ features/             # пользовательские сценарии (пока пусто)
-├─ entities/             # бизнес-сущности (пока пусто)
+│  └─ timer/TimerPage.vue          # композиция кольца + управления
+├─ widgets/              # композиции из features/entities
+│  └─ timer-ring/        # SVG-кольцо прогресса + время + фаза + точки цикла
+├─ features/             # пользовательские сценарии
+│  └─ timer-control/     # табы режимов + start/pause/reset/skip
+├─ entities/             # бизнес-сущности
+│  └─ session/           # домен сессии: model/{types,session.store} + index (barrel)
 └─ shared/               # переиспользуемое, без бизнес-логики
    ├─ ui/                # shadcn-vue компоненты + свой дизайн-кит
    ├─ api/               # Supabase-клиент, data-access (позже)
-   ├─ lib/utils.ts       # cn() — merge Tailwind-классов
-   ├─ config/themes/     # токены тем (шаг 3)
+   ├─ lib/               # utils.ts (cn), format.ts (mm:ss), chime.ts (WebAudio)
+   ├─ config/
+   │  ├─ i18n/           # createI18n + locales/{en,ru} + translate() для сторов
+   │  └─ themes/         # токены тем (шаг 3)
    └─ platform/          # ★ адаптер платформ
       ├─ types.ts        # IPlatform, IStorageAdapter, INotificationsAdapter, TPlatformName
       ├─ index.ts        # resolvePlatform() → активная платформа
@@ -79,13 +85,21 @@ src/
 - `@theme inline` маппит переменные в Tailwind-утилиты → и утилиты, и shadcn-компоненты тема-зависимы.
 - Кастомные темы (шаг 3) будут TS-объектами в `shared/config/themes`, переключаются через `:root[data-theme=...]`; премиум-темы гейтятся подпиской.
 
-## 7. Соглашения по коду
+## 7. Локализация (i18n)
+- **Все** строки, видимые пользователю, идут через `vue-i18n` — никакого хардкода в шаблонах/сторе.
+- Конфиг — `shared/config/i18n` (`legacy: false`, локали `en`/`ru`, fallback `en`).
+- В компонентах: `const { t } = useI18n()` → `t('controls.start')`.
+- Вне компонентов (Pinia-сторы и пр.): `import { translate } from '@/shared/config/i18n'`.
+- Доменные строки сессии живут под ключами `session.*` / `controls.*`; добавляя сущность — добавляй её ключи в `en.ts` (схема) и `ru.ts`.
+
+## 8. Соглашения по коду
 - **Именование TS:** `type` → префикс **T** (`TPlatformName`), `interface` → **I** (`IPlatform`), `enum` → **E** (`ESessionMode`).
 - Vue — только `<script setup lang="ts">`.
 - Path-алиас `@` → `src` (в `vite.config.ts` и `tsconfig.app.json`).
 - shadcn-vue ставит компоненты в `@/shared/ui` (см. `components.json`).
+- Слайс экспортирует публичный API через `index.ts` (barrel); снаружи импортируем из barrel, не из внутренностей.
 
-## 8. Команды
+## 9. Команды
 ```bash
 bun install        # зависимости
 bun run dev        # dev-сервер (web) на :5173
@@ -94,10 +108,10 @@ bun run preview    # предпросмотр прод-сборки
 # desktop/mobile добавятся на шагах 4–5 (tauri dev, cap run …)
 ```
 
-## 9. Статус по этапам (см. PLAN.md)
+## 10. Статус по этапам (см. PLAN.md)
 - [x] Шаг 0 — план сохранён (PLAN.md + память)
 - [x] Шаг 1 — каркас: Vite+Vue+TS, FSD-скелет, Tailwind v4, shadcn-vue конфиг, Pinia/Router, `shared/platform` (web). Сборка/typecheck/dev — зелёные.
-- [ ] Шаг 2 — таймер MVP (порт движка: 3 режима, цикл 4→длинный, кольцо, chime, персистентность)
+- [x] Шаг 2 — таймер MVP: `entities/session` (Pinia-движок: 3 режима, цикл 4→длинный, chime, уведомления, персистентность настроек), `widgets/timer-ring`, `features/timer-control`; i18n (en/ru). Build/typecheck — зелёные.
 - [ ] Шаг 3 — темы
 - [ ] Шаг 4 — Tauri (desktop)
 - [ ] Шаг 5 — Capacitor (mobile)
