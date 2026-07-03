@@ -89,6 +89,7 @@ export const useSessionStore = defineStore('session', () => {
   function finishSession(): void {
     stop()
     if (settings.value.sound) chime()
+    void platform.haptics?.impact()
     void platform.notifications.notify(translate('session.title'), translate(`session.done.${mode.value}`))
 
     let next: TSessionMode

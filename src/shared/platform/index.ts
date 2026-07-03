@@ -1,6 +1,8 @@
+import { Capacitor } from '@capacitor/core'
 import type { IPlatform } from './types'
 import { webPlatform } from './web'
 import { tauriPlatform } from './tauri'
+import { capacitorPlatform } from './capacitor'
 
 /** Tauri 2 injects these globals into the webview. */
 function isTauri(): boolean {
@@ -10,13 +12,18 @@ function isTauri(): boolean {
   )
 }
 
+/** Capacitor native shell (iOS/Android); false in a plain browser. */
+function isCapacitor(): boolean {
+  return Capacitor.isNativePlatform()
+}
+
 /**
- * Resolve the active platform via runtime detection. Same web bundle runs as
- * web/PWA, Tauri (desktop) and Capacitor (mobile); each gets its adapter here.
- * Capacitor is added in step 5.
+ * Resolve the active platform via runtime detection. The same web bundle runs
+ * as web/PWA, Tauri (desktop) and Capacitor (mobile); each gets its adapter.
  */
 function resolvePlatform(): IPlatform {
   if (isTauri()) return tauriPlatform
+  if (isCapacitor()) return capacitorPlatform
   return webPlatform
 }
 

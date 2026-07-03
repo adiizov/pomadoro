@@ -24,10 +24,18 @@ export interface IWindowAdapter {
   setMini(mini: boolean): Promise<void>
 }
 
+/** Mobile-only tactile feedback. Absent on web & desktop. */
+export interface IHapticsAdapter {
+  /** Short tactile pulse, e.g. when a session ends. */
+  impact(): Promise<void>
+}
+
 export interface IPlatform {
   readonly name: TPlatformName
   readonly storage: IStorageAdapter
   readonly notifications: INotificationsAdapter
   /** Only present where a native window exists (Tauri desktop). */
   readonly window?: IWindowAdapter
+  /** Only present on mobile (Capacitor). */
+  readonly haptics?: IHapticsAdapter
 }
