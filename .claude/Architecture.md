@@ -52,16 +52,18 @@ src/
 ├─ widgets/              # композиции из features/entities
 │  └─ timer-ring/        # SVG-кольцо прогресса + время + фаза + точки цикла
 ├─ features/             # пользовательские сценарии
-│  └─ timer-control/     # табы режимов + start/pause/reset/skip
+│  ├─ timer-control/     # табы режимов + start/pause/reset/skip
+│  └─ theme-switch/      # ThemeSwitcher.vue — выбор цвет-темы + light/dark/system
 ├─ entities/             # бизнес-сущности
-│  └─ session/           # домен сессии: model/{types,session.store} + index (barrel)
+│  ├─ session/           # домен сессии: model/{types,session.store} + index (barrel)
+│  └─ theme/             # домен темы: model/{types,theme.store} — выбор темы+режима, персист, применение к <html>
 └─ shared/               # переиспользуемое, без бизнес-логики
    ├─ ui/                # shadcn-vue компоненты + свой дизайн-кит
    ├─ api/               # Supabase-клиент, data-access (позже)
    ├─ lib/               # utils.ts (cn), format.ts (mm:ss), chime.ts (WebAudio)
    ├─ config/
    │  ├─ i18n/           # createI18n + locales/{en,ru} + translate() для сторов
-   │  └─ themes/         # токены тем (шаг 3)
+   │  └─ themes/         # токены тем: {types,themes,stylesheet} + index — TS-объекты + генерация CSS
    └─ platform/          # ★ адаптер платформ
       ├─ types.ts        # IPlatform, IStorageAdapter, INotificationsAdapter, TPlatformName
       ├─ index.ts        # resolvePlatform() → активная платформа
@@ -80,10 +82,13 @@ src/
 - *(позже)* `haptics` — mobile
 - *(позже)* `purchase` — Stripe (web/desktop) vs IAP (mobile)
 
-## 6. Темизация
-- Токены — CSS-переменные в `src/style.css`: `:root` (light) и `.dark`. Совместимы с shadcn-vue (`--background`, `--primary`, …). Brand-primary — коралловый `#ff6f61`.
-- `@theme inline` маппит переменные в Tailwind-утилиты → и утилиты, и shadcn-компоненты тема-зависимы.
-- Кастомные темы (шаг 3) будут TS-объектами в `shared/config/themes`, переключаются через `:root[data-theme=...]`; премиум-темы гейтятся подпиской.
+## 6. Темизация (шаг 3 — готово)
+Две ортогональные оси: **цвет-тема** (`data-theme`) и **режим** (light/dark через класс `.dark`).
+- **База/нейтрали** — CSS-переменные в `src/style.css`: `:root` (light) и `.dark`. Совместимы с shadcn-vue (`--background`, `--primary`, …). `@theme inline` маппит их в Tailwind-утилиты → и утилиты, и shadcn-компоненты тема-зависимы.
+- **Цвет-темы** — TS-объекты в `shared/config/themes/themes.ts` (`coral`/`ocean`/`forest`/`grape`), каждая переопределяет brand-токены (`--primary`,`--ring`). `injectThemeStyles()` один раз генерит `<style id="app-theme-tokens">` с правилами `:root[data-theme="<id>"]{…}`; переключение = смена атрибута `data-theme`, дальше работает каскад (специфичность `data-theme` > `.dark`, поэтому brand-цвет держится и в тёмном режиме).
+- **Стор** `entities/theme` (Pinia): `themeId` + `mode` (light/dark/system, `system` слушает `prefers-color-scheme`), `watchEffect` применяет `data-theme` и `.dark` на `<html>`, персист через `shared/platform/storage` (ключ `pomodoro:theme`). `injectThemeStyles()` вызывается в `bootstrap()`, `theme.load()` — в `App.vue onMounted`.
+- **UI** — `features/theme-switch/ThemeSwitcher.vue` (свотчи тем + сегмент Sun/Moon/Monitor), размещён в `TimerPage`. Названия/режимы — через i18n (`theme.*`).
+- **Премиум:** у темы есть флаг `premium` (пока `grape`), в свотче показывается замок; реальный гейтинг подпиской — шаг 8.
 
 ## 7. Локализация (i18n)
 - **Все** строки, видимые пользователю, идут через `vue-i18n` — никакого хардкода в шаблонах/сторе.
@@ -112,7 +117,7 @@ bun run preview    # предпросмотр прод-сборки
 - [x] Шаг 0 — план сохранён (PLAN.md + память)
 - [x] Шаг 1 — каркас: Vite+Vue+TS, FSD-скелет, Tailwind v4, shadcn-vue конфиг, Pinia/Router, `shared/platform` (web). Сборка/typecheck/dev — зелёные.
 - [x] Шаг 2 — таймер MVP: `entities/session` (Pinia-движок: 3 режима, цикл 4→длинный, chime, уведомления, персистентность настроек), `widgets/timer-ring`, `features/timer-control`; i18n (en/ru). Build/typecheck — зелёные.
-- [ ] Шаг 3 — темы
+- [x] Шаг 3 — темы: `shared/config/themes` (токены+генерация CSS), `entities/theme` (стор: цвет-тема + light/dark/system, персист, применение к `<html>`), `features/theme-switch` (ThemeSwitcher), i18n `theme.*`. 4 темы (1 премиум-заглушка). Build/typecheck — зелёные.
 - [ ] Шаг 4 — Tauri (desktop)
 - [ ] Шаг 5 — Capacitor (mobile)
 - [ ] Шаг 6 — Supabase (auth + sync)

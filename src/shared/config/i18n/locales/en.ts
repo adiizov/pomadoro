@@ -24,6 +24,19 @@ export const en = {
     reset: 'Reset',
     skip: 'Skip',
   },
+  theme: {
+    names: {
+      coral: 'Coral',
+      ocean: 'Ocean',
+      forest: 'Forest',
+      grape: 'Grape',
+    },
+    mode: {
+      light: 'Light',
+      dark: 'Dark',
+      system: 'System',
+    },
+  },
 }
 
 export type TMessageSchema = typeof en

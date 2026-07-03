@@ -26,4 +26,17 @@ export const ru: TMessageSchema = {
     reset: 'Сброс',
     skip: 'Пропустить',
   },
+  theme: {
+    names: {
+      coral: 'Коралл',
+      ocean: 'Океан',
+      forest: 'Лес',
+      grape: 'Виноград',
+    },
+    mode: {
+      light: 'Светлая',
+      dark: 'Тёмная',
+      system: 'Системная',
+    },
+  },
 }
