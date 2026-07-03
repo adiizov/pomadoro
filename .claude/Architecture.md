@@ -65,20 +65,26 @@ src/
    │  ├─ i18n/           # createI18n + locales/{en,ru} + translate() для сторов
    │  └─ themes/         # токены тем: {types,themes,stylesheet} + index — TS-объекты + генерация CSS
    └─ platform/          # ★ адаптер платформ
-      ├─ types.ts        # IPlatform, IStorageAdapter, INotificationsAdapter, TPlatformName
-      ├─ index.ts        # resolvePlatform() → активная платформа
+      ├─ types.ts        # IPlatform, IStorageAdapter, INotificationsAdapter, IWindowAdapter, TPlatformName
+      ├─ index.ts        # resolvePlatform() → активная платформа (runtime-детект)
       ├─ web/            # реализация для браузера (готово)
-      ├─ tauri/          # (заглушка, шаг 4)
+      ├─ tauri/          # desktop: store + notification плагины + window.setMini (готово, шаг 4)
       └─ capacitor/      # (заглушка, шаг 5)
+
+src-tauri/              # desktop-оболочка (Rust): грузит тот же web-бандл
+├─ Cargo.toml           # tauri (feature tray-icon) + store/notification/single-instance/log плагины
+├─ tauri.conf.json      # окно 420×620, bundle targets (appimage/deb/rpm/app/dmg/nsis)
+├─ capabilities/        # ACL: core+store+notification
+└─ src/lib.rs           # плагины, tray-меню (Show/Hide, Quit), close-to-tray, команда set_mini
 ```
 
 **Правила FSD:** зависимости только «вниз» (`app → pages → widgets → features → entities → shared`). Слой не импортирует соседа того же уровня и ничего «вверх». Кросс-платформенные различия — только через `shared/platform`, фичи остаются платформо-независимыми.
 
 ## 5. Слой `shared/platform`
-Интерфейсы + реализации на платформу, выбор в `index.ts` (сейчас всегда web; позже runtime-детект `window.__TAURI__` / Capacitor global).
-- `storage` — `get/set/remove` (web: localStorage; tauri: Store; capacitor: Preferences)
-- `notifications` — `ensurePermission/notify` (web: Notification API)
-- *(позже)* `tray`/mini-mode — только desktop, на остальных no-op
+Интерфейсы + реализации на платформу, выбор в `index.ts` через runtime-детект (`__TAURI_INTERNALS__`/`__TAURI__` → tauri, иначе web; capacitor — шаг 5).
+- `storage` — `get/set/remove` (web: localStorage; tauri: plugin-store `pomodoro.json`; capacitor: Preferences — позже)
+- `notifications` — `ensurePermission/notify` (web: Notification API; tauri: plugin-notification)
+- `window?` — **desktop-only**, present только у tauri: `setMini(mini)` → resize + always-on-top + hide decorations (Rust-команда `set_mini`). На web/mobile поля нет (`platform.window` undefined), UI-гейт `Boolean(platform.window)`.
 - *(позже)* `haptics` — mobile
 - *(позже)* `purchase` — Stripe (web/desktop) vs IAP (mobile)
 
@@ -110,15 +116,24 @@ bun install        # зависимости
 bun run dev        # dev-сервер (web) на :5173
 bun run build      # vue-tsc -b && vite build (typecheck + прод-сборка)
 bun run preview    # предпросмотр прод-сборки
-# desktop/mobile добавятся на шагах 4–5 (tauri dev, cap run …)
+bun run tauri:dev  # desktop-окно (Tauri) — грузит dev-сервер :5173
+bun run tauri:build # desktop-инсталляторы (AppImage/.deb/.rpm/…)
+# mobile добавится на шаге 5 (cap run …)
 ```
+
+**Предусловия desktop (Tauri):** Rust (rustup, стоит в `~/.cargo`) + системные dev-библиотеки. Ubuntu 24.04:
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file \
+  libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
+```
+Перед `tauri` командами: `source $HOME/.cargo/env`.
 
 ## 10. Статус по этапам (см. PLAN.md)
 - [x] Шаг 0 — план сохранён (PLAN.md + память)
 - [x] Шаг 1 — каркас: Vite+Vue+TS, FSD-скелет, Tailwind v4, shadcn-vue конфиг, Pinia/Router, `shared/platform` (web). Сборка/typecheck/dev — зелёные.
 - [x] Шаг 2 — таймер MVP: `entities/session` (Pinia-движок: 3 режима, цикл 4→длинный, chime, уведомления, персистентность настроек), `widgets/timer-ring`, `features/timer-control`; i18n (en/ru). Build/typecheck — зелёные.
 - [x] Шаг 3 — темы: `shared/config/themes` (токены+генерация CSS), `entities/theme` (стор: цвет-тема + light/dark/system, персист, применение к `<html>`), `features/theme-switch` (ThemeSwitcher), i18n `theme.*`. 4 темы (1 премиум-заглушка). Build/typecheck — зелёные.
-- [ ] Шаг 4 — Tauri (desktop)
+- [~] Шаг 4 — Tauri (desktop): `src-tauri` (Tauri 2), плагины store/notification/single-instance, tray-меню + close-to-tray, mini-mode (`set_mini` + `platform.window`), адаптер `platform/tauri`, runtime-детект, vite под tauri. TS/web-build — зелёные. **Rust-компиляция и `tauri dev`/`build` не проверены** — нужны системные dev-библиотеки (см. предусловия §9, требуют `sudo`). Auto-updater отложен на шаг 9 (нужны ключи подписи + GitHub Releases).
 - [ ] Шаг 5 — Capacitor (mobile)
 - [ ] Шаг 6 — Supabase (auth + sync)
 - [ ] Шаг 7 — tasks

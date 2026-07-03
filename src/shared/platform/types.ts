@@ -18,8 +18,16 @@ export interface INotificationsAdapter {
   notify(title: string, body?: string): Promise<void>
 }
 
+/** Desktop-only window controls (tray/mini-mode). Absent on web & mobile. */
+export interface IWindowAdapter {
+  /** Toggle compact, always-on-top mini-mode. */
+  setMini(mini: boolean): Promise<void>
+}
+
 export interface IPlatform {
   readonly name: TPlatformName
   readonly storage: IStorageAdapter
   readonly notifications: INotificationsAdapter
+  /** Only present where a native window exists (Tauri desktop). */
+  readonly window?: IWindowAdapter
 }

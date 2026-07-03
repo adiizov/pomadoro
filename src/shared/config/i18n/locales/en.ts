@@ -37,6 +37,10 @@ export const en = {
       system: 'System',
     },
   },
+  window: {
+    mini: 'Mini mode',
+    exit: 'Exit mini mode',
+  },
 }
 
 export type TMessageSchema = typeof en

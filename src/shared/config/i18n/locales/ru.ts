@@ -39,4 +39,8 @@ export const ru: TMessageSchema = {
       system: 'Системная',
     },
   },
+  window: {
+    mini: 'Мини-режим',
+    exit: 'Выйти из мини-режима',
+  },
 }
